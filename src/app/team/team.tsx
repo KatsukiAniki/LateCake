@@ -26,6 +26,7 @@ export default function Team() {
     }, []);
 
     useEffect(() => {
+        console.log(team)
         if (team.length > 0) {
             localStorage.setItem('team', JSON.stringify(team));
         }
@@ -54,7 +55,15 @@ export default function Team() {
 
     const removeTeamMember = (id: number) => {
         setTeam(team.filter(member => member.id !== id));
+        removeLastItem();
     };
+
+    const removeLastItem = () =>{
+        if(team.length !> 0)
+            {
+                localStorage.removeItem('team');
+            }
+    }
 
     const editMemberName = (id: number, newName: string) => {
         setTeam(team.map(member => member.id === id ? { ...member, name: newName } : member));
