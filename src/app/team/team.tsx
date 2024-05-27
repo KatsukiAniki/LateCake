@@ -1,21 +1,27 @@
 'use client'
 
 import { useEffect, useState } from 'react';
-import { Pie } from 'react-chartjs-2';
-import { Chart, ArcElement, Tooltip, Legend } from 'chart.js';
+import { Bar } from 'react-chartjs-2';
+import { Chart, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
 import { TeamMember } from '../data/team';
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
 import { EllipsisVerticalIcon, PlusIcon, MinusIcon, TrashIcon, PencilIcon } from '@heroicons/react/24/outline';
 
-
-Chart.register(ArcElement, Tooltip, Legend);
+Chart.register(CategoryScale,
+    LinearScale,
+    BarElement,
+    Title,
+    Tooltip,
+    Legend);
 
 export default function Team() {
     const [team, setTeam] = useState<TeamMember[]>([]);
     const [newMemberName, setNewMemberName] = useState('');
     const [editMemberId, setEditMemberId] = useState<number | null>(null);
     const [editingName, setEditingName] = useState<string>('');
-
+    const [lateLimit, setLateLimit] = useState<number>(3);
+    const [punishment, setPunishment] = useState<string>('Einen Kuchen backen');
+    const [latePerson, setLatePerson] = useState<string>('');
 
 
     useEffect(() => {
@@ -23,17 +29,50 @@ export default function Team() {
         if (storedTeam) {
             setTeam(JSON.parse(storedTeam));
         }
+
+        const storedLimit = localStorage.getItem('lateLimit');
+        if (storedLimit) {
+            setLateLimit(parseInt(storedLimit));
+        }
+
+        const storedPunishment = localStorage.getItem('punishment');
+        if (storedPunishment) {
+            setPunishment(storedPunishment);
+        }
     }, []);
 
     useEffect(() => {
-        console.log(team)
         if (team.length > 0) {
             localStorage.setItem('team', JSON.stringify(team));
         }
     }, [team]);
 
+    useEffect(() => {
+        try {
+            localStorage.setItem('lateLimit', lateLimit.toString());
+        } catch (error) {
+            console.error('Fehler beim Speichern des Limits im lokalen Speicher:', error);
+        }
+    }, [lateLimit]);
+
+    useEffect(() => {
+        try {
+            localStorage.setItem('punishment', punishment);
+        } catch (error) {
+            console.error('Fehler beim Speichern der Bestrafung im lokalen Speicher:', error);
+        }
+    }, [punishment]);
+
     const addPoint = (id: number) => {
-        setTeam(team.map(member => member.id === id ? { ...member, points: member.points + 1 } : member));
+        setTeam(team.map(member => {
+            if (member.id === id && member.points < lateLimit) {
+                const updatedPoints = member.points + 1;
+                return { ...member, points: updatedPoints };
+            } else {
+                setLatePerson(member.name);
+                return member;
+            }
+        }));
     };
 
     const removePoint = (id: number) => {
@@ -58,12 +97,15 @@ export default function Team() {
         removeLastItem();
     };
 
-    const removeLastItem = () =>{
-        if(team.length !> 0)
-            {
-                localStorage.removeItem('team');
-            }
+    const removeLastItem = () => {
+        if (team.length! > 0) {
+            localStorage.removeItem('team');
+        }
     }
+
+    const clearPoints = () => {
+        setTeam(team.map(member => ({ ...member, points: 0 })));
+    };
 
     const editMemberName = (id: number, newName: string) => {
         setTeam(team.map(member => member.id === id ? { ...member, name: newName } : member));
@@ -71,39 +113,48 @@ export default function Team() {
         setEditingName("");
     };
 
-    const colors = [
-        '#FF5733',
-        '#33FF57',
-        '#FF33A1',
-        '#3357FF',
-        '#33FFF6',
-        '#FFC733',
-        '#A133FF',
-        '#33FFB2',
-        '#FF5733',
-        '#3357FF',
-    ];
-
     const data = {
         labels: team.map(member => member.name),
         datasets: [
             {
-                data: team.map(member => member.points),
-                backgroundColor: colors,
-                hoverBackgroundColor: colors,
+                label: 'Verspätungen',
+                data: team.map(member => Math.min(member.points, lateLimit)),
+                backgroundColor: '#4299E1',
+                hoverBackgroundColor: '#2C5282',
             },
         ],
     };
 
+    const options = {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'top' as const,
+            },
+            title: {
+                display: true,
+                text: 'Verspätungen im Team',
+            },
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                max: lateLimit,
+            },
+        },
+    };
+
     return (
         <div className="content-height bg-gray-100 p-6 flex flex-col items-center">
-            <div className="mb-4 flex w-full items-start">
+            <div className="mb-4 flex w-full flex-col items-start">
+            <label className='mb-2 font-semibold'>Add Team Member</label>
+                <div>
                 <input
                     type="text"
                     value={newMemberName}
                     onChange={(e) => setNewMemberName(e.target.value)}
                     placeholder="New team member"
-                    className="px-3 py-2 border rounded mr-2"
+                    className="px-3 py-2 border rounded mb-4 mr-2"
                 />
                 <button
                     onClick={addTeamMember}
@@ -111,7 +162,36 @@ export default function Team() {
                 >
                     Add Team Member
                 </button>
+                </div>
+                <label className="mb-2 font-semibold">Limit der Verspätungen</label>
+                <input
+                    type="number"
+                    value={lateLimit}
+                    onChange={(e) => setLateLimit(parseInt(e.target.value))}
+                    placeholder="Late Limit"
+                    className="pl-3 py-2 border rounded mb-4 w-12"
+                />
+                <label className="mb-2 font-semibold">Bestrafung</label>
+                <input
+                    type="text"
+                    value={punishment}
+                    onChange={(e) => setPunishment(e.target.value)}
+                    placeholder="Bestrafung"
+                    className="px-3 py-2 border rounded mb-4 w-1/6"
+                />
+                <button
+                    onClick={clearPoints}
+                    className="px-3 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+                >
+                    Clear Points
+                </button>
             </div>
+
+            {team.some(member => member.points >= lateLimit) && (
+                <div className="mb-4 w-1/3 bg-yellow-500 text-white p-4 rounded shadow">
+                    <p>Ein oder mehrere Mitglieder haben das Limit von {lateLimit} Verspätungen erreicht! <br /> Die Bestrafung ist: <strong>{punishment}</strong></p>
+                </div>
+            )}
 
             <div className="flex w-full">
                 <ul className="w-1/4 max-h-[600px] overflow-y-auto bg-white p-4 rounded shadow">
@@ -136,7 +216,6 @@ export default function Team() {
                                 <span>{member.name}</span>
                             )}
                             <div className="flex items-center">
-
                                 <PlusIcon
                                     className='w-5 h-5 text-green-600 hover:text-green-400 mr-2 hover:cursor-pointer'
                                     aria-hidden="true"
@@ -191,8 +270,8 @@ export default function Team() {
                 </ul>
 
                 <div className="w-1/2 flex justify-center items-center">
-                    <div className="bg-white p-4 rounded shadow" style={{ width: '100%', height: '100%', maxWidth: '600px', maxHeight: '600px' }}>
-                        <Pie data={data} />
+                    <div className="bg-white p-4 rounded shadow" style={{ width: '100%', height: '100%', maxWidth: '700px', maxHeight: '700px' }}>
+                        <Bar data={data} options={options} />
                     </div>
                 </div>
             </div>
