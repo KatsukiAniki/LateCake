@@ -20,8 +20,7 @@ export default function Team() {
     const [editMemberId, setEditMemberId] = useState<number | null>(null);
     const [editingName, setEditingName] = useState<string>('');
     const [lateLimit, setLateLimit] = useState<number>(3);
-    const [punishment, setPunishment] = useState<string>('Einen Kuchen backen');
-    const [latePerson, setLatePerson] = useState<string>('');
+    const [punishment, setPunishment] = useState<string>('Bake a cake');
 
 
     useEffect(() => {
@@ -69,7 +68,6 @@ export default function Team() {
                 const updatedPoints = member.points + 1;
                 return { ...member, points: updatedPoints };
             } else {
-                setLatePerson(member.name);
                 return member;
             }
         }));
@@ -117,7 +115,7 @@ export default function Team() {
         labels: team.map(member => member.name),
         datasets: [
             {
-                label: 'Verspätungen',
+                label: 'Delays',
                 data: team.map(member => Math.min(member.points, lateLimit)),
                 backgroundColor: '#4299E1',
                 hoverBackgroundColor: '#2C5282',
@@ -133,7 +131,7 @@ export default function Team() {
             },
             title: {
                 display: true,
-                text: 'Verspätungen im Team',
+                text: 'Delays in the team',
             },
         },
         scales: {
@@ -163,7 +161,7 @@ export default function Team() {
                     Add Team Member
                 </button>
                 </div>
-                <label className="mb-2 font-semibold">Limit der Verspätungen</label>
+                <label className="mb-2 font-semibold">Delay Limit</label>
                 <input
                     type="number"
                     value={lateLimit}
@@ -171,12 +169,12 @@ export default function Team() {
                     placeholder="Late Limit"
                     className="pl-3 py-2 border rounded mb-4 w-12"
                 />
-                <label className="mb-2 font-semibold">Bestrafung</label>
+                <label className="mb-2 font-semibold">Punishment</label>
                 <input
                     type="text"
                     value={punishment}
                     onChange={(e) => setPunishment(e.target.value)}
-                    placeholder="Bestrafung"
+                    placeholder="Punishment"
                     className="px-3 py-2 border rounded mb-4 w-1/6"
                 />
                 <button
@@ -189,7 +187,7 @@ export default function Team() {
 
             {team.some(member => member.points >= lateLimit) && (
                 <div className="mb-4 w-1/3 bg-yellow-500 text-white p-4 rounded shadow">
-                    <p>Ein oder mehrere Mitglieder haben das Limit von {lateLimit} Verspätungen erreicht! <br /> Die Bestrafung ist: <strong>{punishment}</strong></p>
+                    <p>One or more members have exceeded the limit of {lateLimit} delays! <br /> The punishment is: <strong>{punishment}</strong></p>
                 </div>
             )}
 
